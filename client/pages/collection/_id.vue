@@ -127,6 +127,12 @@ export default {
           action: 'open-rss-feed'
         })
       }
+      if (this.userIsAdminOrUp) {
+        items.push({
+          text: this.$strings.LabelShare,
+          action: 'open-rss-feed'
+        })
+      }
       if (this.userCanDelete) {
         items.push({
           text: this.$strings.ButtonDelete,

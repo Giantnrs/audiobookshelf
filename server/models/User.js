@@ -131,11 +131,14 @@ class User extends Model {
     canAccessExplicitContent: 'accessExplicitContent',
     canAccessAllLibraries: 'accessAllLibraries',
     canAccessAllTags: 'accessAllTags',
+    canAccessAllSeries: 'accessAllSeries',
     canCreateEReader: 'createEreader',
     tagsAreDenylist: 'selectedTagsNotAccessible',
+    seriesAreDenylist: 'selectedSeriesNotAccessible',
     // Direct mapping for array-based permissions
     allowedLibraries: 'librariesAccessible',
-    allowedTags: 'itemTagsSelected'
+    allowedTags: 'itemTagsSelected',
+    allowedSeries: 'itemSeriesSelected'
   }
 
   /**
@@ -176,9 +179,12 @@ class User extends Model {
       accessAllLibraries: true,
       accessAllTags: true,
       accessExplicitContent: type === 'root' || type === 'admin',
+      accessAllSeries: true,
       selectedTagsNotAccessible: false,
+      selectedSeriesNotAccessible: false,
       librariesAccessible: [],
-      itemTagsSelected: []
+      itemTagsSelected: [],
+      itemSeriesSelected: []
     }
   }
 
@@ -601,9 +607,11 @@ class User extends Model {
     const seriesHideFromContinueListening = this.extraData?.seriesHideFromContinueListening || []
     const librariesAccessible = this.permissions?.librariesAccessible || []
     const itemTagsSelected = this.permissions?.itemTagsSelected || []
+    const itemSeriesSelected = this.permissions?.itemSeriesSelected || []
     const permissions = { ...this.permissions }
     delete permissions.librariesAccessible
     delete permissions.itemTagsSelected
+    delete permissions.itemSeriesSelected
 
     const json = {
       id: this.id,
@@ -625,6 +633,7 @@ class User extends Model {
       permissions: permissions,
       librariesAccessible: [...librariesAccessible],
       itemTagsSelected: [...itemTagsSelected],
+      itemSeriesSelected: [...itemSeriesSelected],
       hasOpenIDLink: !!this.authOpenIDSub
     }
     if (minimal) {
@@ -644,6 +653,23 @@ class User extends Model {
     if (this.permissions?.accessAllLibraries) return true
     if (!this.permissions?.librariesAccessible) return false
     return this.permissions.librariesAccessible.includes(libraryId)
+  }
+
+  /**
+   * Check user has access to library item with Series
+   *
+   * @param {string[]} series
+   * @returns {boolean}
+   */
+  checkCanAccessLibraryItemWithSeries(series) {
+    if (this.permissions.accessAllSeries) return true
+    const itemSeriesSelected = this.permissions?.itemSeriesSelected || []
+    if (this.permissions.selectedSeriesNotAccessible) {
+      if (!series?.length) return true
+      return series.every((serie) => !itemSeriesSelected?.includes(serie))
+    }
+    if (!series?.length) return false
+    return itemSeriesSelected.some((serie) => series.includes(serie))
   }
 
   /**
@@ -676,7 +702,7 @@ class User extends Model {
 
     if (libraryItemExplicit && !this.canAccessExplicitContent) return false
 
-    return this.checkCanAccessLibraryItemWithTags(libraryItem.media.tags)
+    return this.checkCanAccessLibraryItemWithTags(libraryItem.media.tags) && this.checkCanAccessLibraryItemWithSeries(libraryItem.media.series)
   }
 
   /**
@@ -951,7 +977,7 @@ class User extends Model {
         throw new Error(`Unexpected permission property: ${absKey}`)
       }
 
-      if (!['librariesAccessible', 'itemTagsSelected'].includes(userPermKey)) {
+      if (!['librariesAccessible', 'itemTagsSelected', 'itemSeriesSelected'].includes(userPermKey)) {
         if (this.permissions[userPermKey] !== !!absPermissions[absKey]) {
           this.permissions[userPermKey] = !!absPermissions[absKey]
           hasUpdates = true
@@ -974,6 +1000,20 @@ class User extends Model {
       hasUpdates = true
     }
 
+    // Handle allowedSeries
+    const itemSeriesSelected = this.permissions.itemSeriesSelected || []
+    if (this.permissions.accessAllSeries) {
+      if (itemSeriesSelected.length) {
+        this.permissions.itemSeriesSelected = []
+        hasUpdates = true
+      }
+    } else if (absPermissions.allowedSeries?.length && absPermissions.allowedSeries.join(',') !== itemSeriesSelected.join(',')) {
+      if (absPermissions.allowedSeries.some((series) => typeof series !== 'string')) {
+        throw new Error('Invalid permission property "allowedSeries", expecting array of strings')
+      }
+      this.permissions.itemSeriesSelected = absPermissions.allowedSeries
+      hasUpdates = true
+    }
     // Handle allowedTags
     const itemTagsSelected = this.permissions.itemTagsSelected || []
     if (this.permissions.accessAllTags) {

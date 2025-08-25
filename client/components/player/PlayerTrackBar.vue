@@ -189,6 +189,10 @@ export default {
         this.$refs.trackCursor.style.opacity = 1
         this.$refs.trackCursor.style.left = offsetX - 1 + 'px'
       }
+      if (!this.isHovering) {
+        window.addEventListener('wheel', this.scroll)
+      }
+      this.isHovering = true
     },
     mouseleaveTrack() {
       if (this.$refs.hoverTimestamp) {
@@ -200,7 +204,21 @@ export default {
       if (this.$refs.trackCursor) {
         this.$refs.trackCursor.style.opacity = 0
       }
+      if (this.isHovering) {
+        window.removeEventListener('wheel', this.scroll)
+      }
+      this.isHovering = false
     },
+    scroll(e) {
+      console.log('scroll event', e.deltaY)
+      if (!e || !e.deltaY) return
+      if (e.deltaY > 0) {
+        this.$emit('jumpForward')
+      } else {
+        this.$emit('jumpBackward')
+      }
+    },
+
     setTrackWidth() {
       if (this.$refs.track) {
         this.trackWidth = this.$refs.track.clientWidth

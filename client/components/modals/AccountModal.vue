@@ -117,6 +117,23 @@
                 </div>
               </div>
             </div>
+            <div class="flex items-cen~ter my-2 max-w-md">
+              <div class="w-1/2">
+                <p>{{ $strings.LabelPermissionsAccessAllSeries }}</p>
+              </div>
+              <div class="w-1/2">
+                <ui-toggle-switch v-model="newUser.permissions.accessAllSeries" @input="accessAllSeriesToggled" />
+              </div>
+            </div>
+            <div v-if="!newUser.permissions.accessAllSeries" class="my-4">
+              <div class="flex items-center">
+                <ui-multi-select-dropdown v-model="newUser.itemSeriesSelected" :items="itemSeries" :label="seriesSelectionText" />
+                <div class="flex items-center pt-4 px-2">
+                  <p class="px-3 font-semibold" id="selected-series-not-accessible--permissions-toggle">{{ $strings.LabelInvert }}</p>
+                  <ui-toggle-switch labeledBy="selected-series-not-accessible--permissions-toggle" v-model="newUser.permissions.selectedSeriesNotAccessible" />
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="flex pt-4 px-2">
@@ -146,7 +163,9 @@ export default {
       newUser: {},
       isNew: true,
       tags: [],
+      series: [],
       loadingTags: false,
+      loadingSeries: false,
       unlinkingFromOpenID: false
     }
   },
@@ -207,8 +226,19 @@ export default {
         }
       })
     },
+    itemSeries() {
+      return this.series.map((s) => {
+        return {
+          text: s.name,
+          value: s.id
+        }
+      })
+    },
     tagsSelectionText() {
       return this.newUser.permissions.selectedTagsNotAccessible ? this.$strings.LabelTagsNotAccessibleToUser : this.$strings.LabelTagsAccessibleToUser
+    },
+    seriesSelectionText() {
+      return this.newUser.permissions.selectedSeriesNotAccessible ? this.$strings.SeriesNotAccessibleToUser : this.$strings.SeriesAccessibleToUser
     },
     hasOpenIDLink() {
       return !!this.account?.hasOpenIDLink
@@ -265,11 +295,40 @@ export default {
           this.loadingTags = false
         })
     },
+    async fetchAllSeries() {
+      this.loadingSeries = true
+      this.series = []
+      const libraries = this.libraries || []
+      const seriesPromises = libraries.map((library) =>
+        this.$axios
+          .$get(`/api/libraries/${library.id}/series?limit=100`)
+          .then((res) => {
+            //console.log(`Series from library ${library.name}:`, res.results) // Debug log
+            return res.results || []
+          })
+          .catch((error) => {
+            console.error('Failed to load series', error)
+            this.loadingSeries = false
+          })
+      )
+      const allSeriesArrays = await Promise.all(seriesPromises)
+      const allSeries = allSeriesArrays.flat()
+      this.series = allSeries
+      this.loadingSeries = false
+    },
     accessAllLibrariesToggled(val) {
       if (!val && !this.newUser.librariesAccessible.length) {
         this.newUser.librariesAccessible = this.libraries.map((l) => l.id)
       } else if (val && this.newUser.librariesAccessible.length) {
         this.newUser.librariesAccessible = []
+      }
+    },
+    accessAllSeriesToggled(val) {
+      if (val) {
+        if (this.newUser.itemSeriesSelected?.length) {
+          this.newUser.itemSeriesSelected = []
+        }
+        this.newUser.permissions.selectedSeriesNotAccessible = false
       }
     },
     submitForm() {
@@ -360,12 +419,15 @@ export default {
         accessExplicitContent: type === 'admin',
         accessAllLibraries: true,
         accessAllTags: true,
+        accessAllSeries: true,
         selectedTagsNotAccessible: false,
+        selectedSeriesNotAccessible: false,
         createEreader: type === 'admin'
       }
     },
     init() {
       this.fetchAllTags()
+      this.fetchAllSeries()
       this.isNew = !this.account
 
       if (this.account) {
@@ -377,7 +439,8 @@ export default {
           isActive: this.account.isActive,
           permissions: { ...this.account.permissions },
           librariesAccessible: [...(this.account.librariesAccessible || [])],
-          itemTagsSelected: [...(this.account.itemTagsSelected || [])]
+          itemTagsSelected: [...(this.account.itemTagsSelected || [])],
+          itemSeriesSelected: [...(this.account.itemSeriesSelected || [])]
         }
       } else {
         this.newUser = {
@@ -393,12 +456,15 @@ export default {
             upload: false,
             accessAllLibraries: true,
             accessAllTags: true,
+            accessAllSeries: true,
             accessExplicitContent: false,
             selectedTagsNotAccessible: false,
+            selectedSeriesNotAccessible: false,
             createEreader: false
           },
           librariesAccessible: [],
-          itemTagsSelected: []
+          itemTagsSelected: [],
+          itemSeriesSelected: []
         }
       }
     }

@@ -36,6 +36,18 @@ module.exports = {
         )
       }
     }
+    if (!user.permissions?.accessAllSeries && user.permissions?.itemSeriesSelected?.length) {
+      replacements['userSeriesSelected'] = user.permissions.itemSeriesSelected
+      if (user.permissions.selectedSeriesNotAccessible) {
+        bookWhere.push(Sequelize.where(Sequelize.literal(`(SELECT count(*) FROM json_each(series) WHERE json_valid(series) AND json_each.value IN (:userSeriesSelected))`), 0))
+      } else {
+        bookWhere.push(
+          Sequelize.where(Sequelize.literal(`(SELECT count(*) FROM json_each(series) WHERE json_valid(series) AND json_each.value IN (:userSeriesSelected))`), {
+            [Sequelize.Op.gte]: 1
+          })
+        )
+      }
+    }
     return {
       bookWhere,
       replacements

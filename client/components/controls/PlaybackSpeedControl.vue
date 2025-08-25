@@ -1,5 +1,5 @@
 <template>
-  <div ref="wrapper" class="relative ml-4 sm:ml-8" v-click-outside="clickOutside">
+  <div ref="wrapper" class="relative ml-4 sm:ml-8" v-click-outside="clickOutside" @mouseover="mouseover" @mouseleave="mouseleave">
     <div class="flex items-center justify-center text-gray-300 cursor-pointer h-full" @mousedown.prevent @mouseup.prevent @click="setShowMenu(true)">
       <span class="text-gray-200 text-sm sm:text-base">{{ playbackRateDisplay }}<span class="text-base">x</span></span>
     </div>
@@ -76,6 +76,26 @@ export default {
     }
   },
   methods: {
+    scroll(e) {
+      if (!e || !e.wheelDeltaY) return
+      if (e.wheelDeltaY > 0) {
+        this.playbackRate = Math.min(2, this.playbackRate + 0.1)
+      } else {
+        this.playbackRate = Math.max(0.5, this.playbackRate - 0.1)
+      }
+    },
+    mouseover() {
+      if (!this.isHovering) {
+        window.addEventListener('mousewheel', this.scroll)
+      }
+      this.isHovering = true
+    },
+    mouseleave() {
+      if (this.isHovering) {
+        window.removeEventListener('mousewheel', this.scroll)
+      }
+      this.isHovering = false
+    },
     clickOutside() {
       this.setShowMenu(false)
     },
