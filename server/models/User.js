@@ -663,13 +663,16 @@ class User extends Model {
    */
   checkCanAccessLibraryItemWithSeries(series) {
     if (this.permissions.accessAllSeries) return true
+
     const itemSeriesSelected = this.permissions?.itemSeriesSelected || []
+
     if (this.permissions.selectedSeriesNotAccessible) {
       if (!series?.length) return true
-      return series.every((serie) => !itemSeriesSelected?.includes(serie))
+      return series.every((serie) => !itemSeriesSelected.includes(serie.id))
     }
+
     if (!series?.length) return false
-    return itemSeriesSelected.some((serie) => series.includes(serie))
+    return itemSeriesSelected.some((serieId) => series.some((serie) => serie.id === serieId))
   }
 
   /**

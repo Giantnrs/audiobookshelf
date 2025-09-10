@@ -104,6 +104,13 @@ module.exports = {
           attrQuery += ' AND (SELECT count(*) FROM json_each(tags) WHERE json_valid(tags) AND json_each.value IN (:userTagsSelected)) > 0'
         }
       }
+      if (!user.permissions?.accessAllSeries && user.permissions?.itemSeriesSelected?.length) {
+        if (user.permissions.selectedSeriesNotAccessible) {
+          attrQuery += ' AND bs.seriesId NOT IN (:userSeriesSelected)'
+        } else {
+          attrQuery += ' AND bs.seriesId IN (:userSeriesSelected)'
+        }
+      }
     }
 
     if (attrQuery) {
@@ -144,7 +151,13 @@ module.exports = {
     } else if (sortBy === 'random') {
       order.push(Database.sequelize.random())
     }
-
+    // but before the actual database query
+    console.log('=== SERIES DEBUG ===')
+    console.log('userPermissionBookWhere.bookWhere.length:', userPermissionBookWhere.bookWhere.length)
+    console.log('attrQuery:', attrQuery)
+    console.log('seriesWhere:', seriesWhere)
+    console.log('replacements:', userPermissionBookWhere.replacements)
+    console.log('==================')
     const { rows: series, count } = await Database.seriesModel.findAndCountAll({
       where: seriesWhere,
       limit,

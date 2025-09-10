@@ -344,6 +344,10 @@ export default {
         this.$toast.error(this.$strings.ToastNewUserTagError)
         return
       }
+      if (!this.newUser.permissions.accessAllSeries && !this.newUser.itemSeriesSelected.length) {
+        this.$toast.error(this.$strings.ToastNewUserTagError)
+        return
+      }
 
       if (this.isNew) {
         this.submitCreateAccount()

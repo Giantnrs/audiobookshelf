@@ -18,7 +18,6 @@ module.exports = {
     const bookWhere = []
     const replacements = {}
     if (!user) return { bookWhere, replacements }
-
     if (!user.canAccessExplicitContent) {
       bookWhere.push({
         explicit: false
@@ -36,16 +35,22 @@ module.exports = {
         )
       }
     }
+    //Add the series filter to the bookWhere array
+    const subqueryCondition = Sequelize.literal(`(SELECT count(*) FROM bookSeries bs WHERE bs.bookId = book.id AND bs.seriesId IN (:userSeriesSelected))`)
     if (!user.permissions?.accessAllSeries && user.permissions?.itemSeriesSelected?.length) {
       replacements['userSeriesSelected'] = user.permissions.itemSeriesSelected
       if (user.permissions.selectedSeriesNotAccessible) {
-        bookWhere.push(Sequelize.where(Sequelize.literal(`(SELECT count(*) FROM json_each(series) WHERE json_valid(series) AND json_each.value IN (:userSeriesSelected))`), 0))
+        bookWhere.push({
+          id: {
+            [Sequelize.Op.notIn]: Sequelize.literal(`(SELECT DISTINCT bookId FROM bookSeries WHERE seriesId IN (:userSeriesSelected))`)
+          }
+        })
       } else {
-        bookWhere.push(
-          Sequelize.where(Sequelize.literal(`(SELECT count(*) FROM json_each(series) WHERE json_valid(series) AND json_each.value IN (:userSeriesSelected))`), {
-            [Sequelize.Op.gte]: 1
-          })
-        )
+        bookWhere.push({
+          id: {
+            [Sequelize.Op.in]: Sequelize.literal(`(SELECT DISTINCT bookId FROM bookSeries WHERE seriesId IN (:userSeriesSelected))`)
+          }
+        })
       }
     }
     return {
@@ -619,10 +624,9 @@ module.exports = {
       order: sortOrder,
       subQuery: false
     }
-
     const findAndCountAll = process.env.QUERY_PROFILING ? profile(this.findAndCountAll) : this.findAndCountAll
+    console.log('findOptions:', findOptions)
     const { rows: books, count } = await findAndCountAll(findOptions, limit, offset, !filterGroup && !userPermissionBookWhere.bookWhere.length)
-
     const libraryItems = books.map((bookExpanded) => {
       const libraryItem = bookExpanded.libraryItem
       const book = bookExpanded

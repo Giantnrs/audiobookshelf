@@ -143,11 +143,20 @@ class UserController {
       Logger.warn(`[UserController] create: Invalid itemTagsSelected value: ${reqItemTagsSelected}`)
       reqItemTagsSelected = null
     }
+    // SeriesAccessible
+    let reqItemSeriesSelected = req.body.itemSeriesSelected || req.body.permissions?.itemSeriesSelected
+    if (reqItemSeriesSelected && (!Array.isArray(reqItemSeriesSelected) || reqItemSeriesSelected.some((seriesId) => typeof seriesId !== 'string'))) {
+      Logger.warn(`[UserController] create: Invalid itemSeriesSelected value: ${reqItemSeriesSelected}`)
+      reqItemSeriesSelected = null
+    }
     if (req.body.permissions?.itemTagsSelected || req.body.permissions?.librariesAccessible) {
       delete req.body.permissions.itemTagsSelected
       delete req.body.permissions.librariesAccessible
     }
 
+    if (req.body.permissions?.itemSeriesSelected || req.body.permissions?.librariesAccessible) {
+      delete req.body.permissions.itemSeriesSelected
+    }
     // Map permissions
     const permissions = Database.userModel.getDefaultPermissionsForUserType(userType)
     if (req.body.permissions && typeof req.body.permissions === 'object') {
@@ -166,6 +175,7 @@ class UserController {
 
     permissions.itemTagsSelected = reqItemTagsSelected || []
     permissions.librariesAccessible = reqLibrariesAccessible || []
+    permissions.itemSeriesSelected = reqItemSeriesSelected || []
 
     const newUser = {
       id: userId,
@@ -262,6 +272,15 @@ class UserController {
       Logger.warn(`[UserController] update: Invalid librariesAccessible value: ${updateLibrariesAccessible}`)
       updateLibrariesAccessible = null
     }
+    let updateItemSeriesSelected = updatePayload.itemSeriesSelected || updatePayload.permissions?.itemSeriesSelected
+    if (updateItemSeriesSelected && (!Array.isArray(updateItemSeriesSelected) || updateItemSeriesSelected.some((seriesId) => typeof seriesId !== 'string'))) {
+      Logger.warn(`[UserController] update: Invalid itemSeriesSelected value: ${updateItemSeriesSelected}`)
+      updateItemSeriesSelected = null
+    }
+    if (updatePayload.permissions?.itemSeriesSelected || updatePayload.permissions?.librariesAccessible) {
+      delete updatePayload.permissions.itemSeriesSelected
+      delete updatePayload.permissions.librariesAccessible
+    }
     let updateItemTagsSelected = updatePayload.itemTagsSelected || updatePayload.permissions?.itemTagsSelected
     if (updateItemTagsSelected && (!Array.isArray(updateItemTagsSelected) || updateItemTagsSelected.some((tagId) => typeof tagId !== 'string'))) {
       Logger.warn(`[UserController] update: Invalid itemTagsSelected value: ${updateItemTagsSelected}`)
@@ -290,6 +309,10 @@ class UserController {
         }
       }
 
+      if (updateItemSeriesSelected && updateItemSeriesSelected.join(',') !== user.permissions.itemSeriesSelected.join(',')) {
+        permissions.itemSeriesSelected = updateItemSeriesSelected
+        hasPermissionsUpdates = true
+      }
       if (updateItemTagsSelected && updateItemTagsSelected.join(',') !== user.permissions.itemTagsSelected.join(',')) {
         permissions.itemTagsSelected = updateItemTagsSelected
         hasPermissionsUpdates = true

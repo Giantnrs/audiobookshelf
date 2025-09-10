@@ -244,6 +244,13 @@ module.exports = {
           attrQuery += ' AND (SELECT count(*) FROM json_each(tags) WHERE json_valid(tags) AND json_each.value IN (:userTagsSelected)) > 0'
         }
       }
+      if (!user.permissions?.accessAllSeries && user.permissions?.itemSeriesSelected?.length) {
+        if (user.permissions.selectedSeriesNotAccessible) {
+          attrQuery += ' AND bs.seriesId NOT IN (:userSeriesSelected)'
+        } else {
+          attrQuery += ' AND bs.seriesId IN (:userSeriesSelected)'
+        }
+      }
       seriesWhere.push(
         Sequelize.where(Sequelize.literal(`(${attrQuery})`), {
           [Sequelize.Op.gt]: 0
