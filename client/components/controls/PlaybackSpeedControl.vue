@@ -1,5 +1,5 @@
 <template>
-  <div ref="wrapper" class="relative ml-4 sm:ml-8" v-click-outside="clickOutside">
+  <div ref="wrapper" class="relative ml-4 sm:ml-8" v-click-outside="clickOutside" @mouseover="mouseover" @mouseleave="mouseleave">
     <div class="flex items-center justify-center text-gray-300 cursor-pointer h-full" @mousedown.prevent @mouseup.prevent @click="setShowMenu(true)">
       <span class="text-gray-200 text-sm sm:text-base">{{ playbackRateDisplay }}<span class="text-base">x</span></span>
     </div>
@@ -18,7 +18,7 @@
       </div>
       <div class="w-full py-1 px-1">
         <div class="flex items-center justify-between">
-          <ui-icon-btn :disabled="!canDecrement" icon="remove" @click="decrement" />
+          <ui-icon-btn :disabled="!canIncrement" icon="remove" @click="decrement" />
           <p class="px-2 text-2xl sm:text-3xl">{{ playbackRateDisplay }}<span class="text-2xl">x</span></p>
           <ui-icon-btn :disabled="!canIncrement" icon="add" @click="increment" />
         </div>
@@ -43,6 +43,7 @@ export default {
     return {
       showMenu: false,
       currentPlaybackRate: 0,
+      isHovering: false,
       MIN_SPEED: 0.5,
       MAX_SPEED: 10,
       menuLeft: -96,
@@ -76,6 +77,27 @@ export default {
     }
   },
   methods: {
+    scroll(e) {
+      if (!e || !e.wheelDeltaY) return
+      if (e.wheelDeltaY > 0) {
+        this.increment()
+      } else {
+        this.decrement()
+      }
+      this.$emit('change', this.playbackRate)
+    },
+    mouseover() {
+      if (!this.isHovering) {
+        window.addEventListener('mousewheel', this.scroll)
+      }
+      this.isHovering = true
+    },
+    mouseleave() {
+      if (this.isHovering) {
+        window.removeEventListener('mousewheel', this.scroll)
+      }
+      this.isHovering = false
+    },
     clickOutside() {
       this.setShowMenu(false)
     },
@@ -118,6 +140,9 @@ export default {
   },
   mounted() {
     this.currentPlaybackRate = this.playbackRate
+  },
+  beforeDestroy() {
+    window.removeEventListener('mousewheel', this.scroll)
   }
 }
 </script>
