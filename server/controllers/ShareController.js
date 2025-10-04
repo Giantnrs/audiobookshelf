@@ -398,5 +398,96 @@ class ShareController {
       res.status(500).send('Internal server error')
     }
   }
+  /**
+   * POST: /api/share/queue
+   * Create a new queue share
+   *
+   * @param {RequestWithUser} req
+   * @param {Response} res
+   */
+  async createQueueShare(req, res) {
+    if (!req.user.isAdminOrUp) {
+      Logger.error(`[ShareController] Non-admin user "${req.user.username}" attempted to create queue share`)
+      return res.sendStatus(403)
+    }
+
+    const { slug, expiresAt, queueItems } = req.body
+    if (!slug?.trim?.() || !Array.isArray(queueItems) || !queueItems.length) {
+      return res.status(400).send('Missing or invalid required fields')
+    }
+    if (expiresAt === null || isNaN(expiresAt) || expiresAt < 0) {
+      return res.status(400).send('Invalid expiration date')
+    }
+
+    try {
+      // Check if the queue share already exists by slug
+      const existingQueueShare = await Database.queueShareModel.findOne({ where: { slug } })
+      if (existingQueueShare) {
+        return res.status(409).send('Slug is already in use')
+      }
+
+      // Optionally: Validate all queueItems exist in your library
+
+      const queueShare = await Database.queueShareModel.create({
+        slug,
+        expiresAt: expiresAt || null,
+        queueItems: JSON.stringify(queueItems),
+        userId: req.user.id
+      })
+
+      ShareManager.openQueueShare(queueShare)
+
+      res.status(201).json(queueShare.toJSONForClient())
+    } catch (error) {
+      Logger.error(`[ShareController] Failed`, error)
+      res.status(500).send('Internal server error')
+    }
+  }
+
+  /**
+   * GET: /api/share/queue/:slug
+   * Get a queue share by slug
+   *
+   * @param {Request} req
+   * @param {Response} res
+   */
+  async getQueueShareBySlug(req, res) {
+    const { slug } = req.params
+    const queueShare = ShareManager.findQueueShareBySlug(slug)
+    if (!queueShare) {
+      return res.status(404).send('Queue share not found')
+    }
+    // Optionally: Resolve queueItems to full metadata for client
+    res.json(queueShare)
+  }
+
+  /**
+   * DELETE: /api/share/queue/:id
+   * Delete a queue share
+   *
+   * @param {RequestWithUser} req
+   * @param {Response} res
+   */
+  async deleteQueueShare(req, res) {
+    if (!req.user.isAdminOrUp) {
+      Logger.error(`[ShareController] Non-admin user "${req.user.username}" attempted to delete queue share`)
+      return res.sendStatus(403)
+    }
+
+    try {
+      const queueShare = await Database.queueShareModel.findByPk(req.params.id)
+      if (!queueShare) {
+        return res.status(404).send('Queue share not found')
+      }
+
+      ShareManager.removeQueueShare(queueShare.id)
+      await queueShare.destroy()
+      res.sendStatus(204)
+    } catch (error) {
+      Logger.error(`[ShareController] Failed`, error)
+      res.status(500).send('Internal server error')
+    }
+  }
 }
+
 module.exports = new ShareController()

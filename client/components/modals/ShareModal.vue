@@ -47,6 +47,20 @@
             </div>
           </div>
         </div>
+        <div class="flex flex-col mb-2">
+          <div class="w-full sm:w-48">
+            <label class="px-1 text-sm font-semibold block">Start Time</label>
+          </div>
+          <div class="inline-flex items-center space-x-2 mt-1">
+            <ui-text-input v-model.number="startHours" type="number" min="0" placeholder="HH" class="w-14 text-center h-10" />
+            <span>H :</span>
+            <ui-text-input v-model.number="startMinutes" type="number" min="0" max="59" placeholder="MM" class="w-14 text-center h-10" />
+            <span>M :</span>
+            <ui-text-input v-model.number="startSeconds" type="number" min="0" max="59" placeholder="SS" class="w-14 text-center h-10" />
+            <span>S</span>
+          </div>
+        </div>
+
         <div class="flex items-center w-full md:w-1/2 mb-4">
           <p class="text-sm text-gray-300 py-1 px-1">{{ $strings.LabelDownloadable }}</p>
           <ui-toggle-switch size="sm" v-model="isDownloadable" />
@@ -92,7 +106,10 @@ export default {
           value: 'days'
         }
       ],
-      isDownloadable: false
+      isDownloadable: false,
+      startHours: 0,
+      startMinutes: 0,
+      startSeconds: 0
     }
   },
   watch: {
@@ -123,11 +140,18 @@ export default {
       return this.$store.state.user.user
     },
     demoShareUrl() {
+      if (this.startTimeOffset > 0) {
+        return `${window.origin}${this.$config.routerBasePath}/share/${this.newShareSlug}?t=${this.startTimeOffset}`
+      }
       return `${window.origin}${this.$config.routerBasePath}/share/${this.newShareSlug}`
     },
     currentShareUrl() {
       if (!this.currentShare) return ''
-      return `${window.origin}${this.$config.routerBasePath}/share/${this.currentShare.slug}`
+      let url = `${window.origin}${this.$config.routerBasePath}/share/${this.currentShare.slug}`
+      if (this.startTimeOffset > 0) {
+        url += `?t=${this.startTimeOffset}`
+      }
+      return url
     },
     currentShareTimeRemaining() {
       if (!this.currentShare) return 'Error'
@@ -145,6 +169,10 @@ export default {
       if (!this.expireDurationSeconds) return this.$strings.LabelPermanent
       const dateMs = Date.now() + this.expireDurationSeconds * 1000
       return this.$formatDatetime(dateMs, this.$store.getters['getServerSetting']('dateFormat'), this.$store.getters['getServerSetting']('timeFormat'))
+    },
+    startTimeOffset() {
+      console.log('Calculating startTimeOffset', this.startHours, this.startMinutes, this.startSeconds)
+      return this.startHours * 3600 + this.startMinutes * 60 + this.startSeconds
     }
   },
   methods: {

@@ -1,5 +1,11 @@
 <template>
   <div v-if="item" class="w-full flex items-center px-4 py-2" :class="wrapperClass" @mouseover="mouseover" @mouseleave="mouseleave">
+    <div class="w-10 min-w-10 md:w-16 md:max-w-16 h-full">
+      <div class="flex h-full items-center justify-center">
+        <span class="material-symbols drag-handle text-lg md:text-xl">menu</span>
+      </div>
+    </div>
+
     <covers-preview-cover :src="coverUrl" :width="48" :book-cover-aspect-ratio="bookCoverAspectRatio" :show-resolution="false" />
     <div class="grow px-2 py-1 queue-item-row-content truncate">
       <p class="text-gray-200 text-sm truncate">{{ title }}</p>

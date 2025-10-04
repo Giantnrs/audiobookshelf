@@ -319,6 +319,11 @@ class ApiRouter {
     //
     this.router.post('/share/mediaitem', ShareController.createMediaItemShare.bind(this))
     this.router.delete('/share/mediaitem/:id', ShareController.deleteMediaItemShare.bind(this))
+    //
+    // Add these for queue sharing:
+    //
+    this.router.post('/share/queue', ShareController.createQueueShare.bind(this))
+    this.router.delete('/share/queue/:id', ShareController.deleteQueueShare.bind(this))
 
     //
     // Stats Routes

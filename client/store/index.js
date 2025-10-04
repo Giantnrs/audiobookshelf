@@ -181,6 +181,11 @@ export const mutations = {
   setPlayerQueueItems(state, items) {
     state.playerQueueItems = items || []
   },
+  clearQueueItems(state) {
+    if (state.playerQueueItems.length > 1) {
+      state.playerQueueItems = [state.playerQueueItems[0]]
+    }
+  },
   removeItemFromQueue(state, item) {
     state.playerQueueItems = state.playerQueueItems.filter((i) => {
       if (!i.episodeId) return i.libraryItemId !== item.libraryItemId
